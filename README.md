@@ -13,7 +13,6 @@ Your challenge, should you choose to accept it is to use the TensorFlow Go packa
 #### Setup
 In your terminal (from inside the root directory of this repository):
 ```bash
-docker-compose build 
 docker-compose run speech_recognition /bin/bash  
 ```
 Your terminal should now be running bash from inside the docker container we've setup for this task.
