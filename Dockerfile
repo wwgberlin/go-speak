@@ -59,10 +59,5 @@ ENV TF_CPP_MIN_LOG_LEVEL 2
 
 RUN go get -d github.com/tensorflow/tensorflow/tensorflow/go
 RUN go test github.com/tensorflow/tensorflow/tensorflow/go
-WORKDIR go/src/github.com/wwgberlin/tf
-ADD . /go/src/github.com/wwgberlin/tf
+
 EXPOSE 6006
-#
-#RUN wget -P /tmp/speech_dataset/ https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz
-#RUN cd /tmp/speech_dataset/
-#RUN tar xzf /tmp/speech_dataset/speech_commands_v0.02.tar.gz

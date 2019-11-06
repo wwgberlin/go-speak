@@ -7,29 +7,57 @@ import (
 	"bufio"
 	"fmt"
 	"reflect"
+	"log"
+)
+
+const (
+	graphFilePath  = "./tmp/speech_recognition_graph.pb"
+	wavFilePath    = "./tmp/speech_dataset/go/9fac5701_nohash_2.wav"
+	labelsFilePath = "./tmp/speech_commands_train/conv_labels.txt"
 )
 
 var (
-	graph  *tf.Graph
 	labels []string
 )
 
 func main() {
-	labelWav("/tmp/speech_dataset/go/9fac5701_nohash_2.wav",
-		"/tmp/speech_commands_train/conv_labels.txt",
-		"/tmp/my_frozen_graph.pb")
+	wavData, err := readWavDataFromFile(wavFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	labels, err := readLabelsFromFile(labelsFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	graph, err := importGraph(graphFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	res, err := runGraph(graph, wavData, labels)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(res)
 }
 
-func labelWav(waveFile string, labelsFile string, graphFile string) {
-	wavData, err := ioutil.ReadFile(waveFile)
-	if err != nil {
-		panic(err)
-	}
+// Read the entire wav file using ioutil.ReadFile (https://golang.org/pkg/io/ioutil/#ReadFile)
+// return the bytes slice and error
+func readWavDataFromFile(wavFilePath string) ([]byte, error) {
+	return ioutil.ReadFile(wavFilePath)
+}
 
-	lfile, err := os.Open(labelsFile)
+// Open the labels file using os.Open (https://golang.org/pkg/os/#Open)
+// return an error if necessary.
+// Pass the returned file to bufio.NewScanner to read the lines (https://golang.org/pkg/bufio/#Scanner
+// --checkout the lines example) return the error is necessary.
+// don't forget to close the file.
+func readLabelsFromFile(labelsFilePath string) ([]string, error) {
+	lfile, err := os.Open(labelsFilePath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+	defer lfile.Close()
 
 	//https://golang.org/pkg/bufio/#example_Scanner_lines
 	s := bufio.NewScanner(lfile)
@@ -37,17 +65,17 @@ func labelWav(waveFile string, labelsFile string, graphFile string) {
 	for s.Scan() {
 		labels = append(labels, s.Text())
 	}
-
-	graph, err = loadGraph(graphFile)
-	if err != nil {
-		panic(err)
-	}
-	runGraph(wavData, labels)
-
+	return labels, s.Err()
 }
-func loadGraph(graphFile string) (*tf.Graph, error) {
+
+// Read the entire graph file using ioutil.ReadFile  (https://golang.org/pkg/io/ioutil/#ReadFile)
+// What is a graph? https://www.tensorflow.org/api_docs/python/tf/Graph
+// instantiate a new Graph using tf.NewGraph (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#NewGraph)
+// Import the bytes read to the graph using the method
+// Import with empty prefix (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#Graph.Import)
+func importGraph(graphFilePath string) (*tf.Graph, error) {
 	// Load inception model
-	model, err := ioutil.ReadFile(graphFile)
+	model, err := ioutil.ReadFile(graphFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -58,35 +86,57 @@ func loadGraph(graphFile string) (*tf.Graph, error) {
 	return graph, nil
 }
 
-func runGraph(wavData []byte, labels []string) {
+//1, Create a new session using tf.NewSession (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#Session)
+//   What is a TensorFlow session? Read here https://danijar.com/what-is-a-tensorflow-session/
+//
+//2. Define a tensor from our "stringified" wavData (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#NewTensor)
+//   What's a Tensor? https://www.tensorflow.org/api_docs/python/tf/Tensor.
+//	 Let's name it simply "tensor". Don't forget to return an error if necessary.
+//
+//3. Using the outputOperationName get the Operation from the graph (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#Graph.Operation)
+//   What's an Operation? https://www.tensorflow.org/api_docs/python/tf/Operation
+//   From the operation let's take the 0th output (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#Operation.Output)
+//   let's call our result "softmaxTensor".
+//
+//4. Define another tenstor from graph operation with output(similar to 4) this time using the inputOperationName this time
+//   (and the 0th output), let's name our result "inputOperation".
+//
+//5. Define a map from an Output type to a *Tensor type and instantiate it with one key value pair:
+//   our inputOperation variable and our "tensor" variable (the one with the wavData)
+//
+//6. Run the session (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#Session.Run)
+//   with the map we've instantiated above and an Output slice containing exactly one item - our softmaxTensor.
+//   assign the result to a variable named output and uncomment the rest of the function to print the results nicely.
+//   Return the respective error if necessary.
+//7	 Run the tests.
+func runGraph(graph *tf.Graph, wavData []byte, labels []string) (string, error) {
 	const (
-		inputName  = "wav_data"       //Name of WAVE data input node in model.
-		outputName = "labels_softmax" //Name of node outputting a prediction in the model
-		numLables  = 3
+		inputOperationName  = "wav_data"       //Name of WAVE data input node in model.
+		outputOperationName = "labels_softmax" //Name of node outputting a prediction in the model
 	)
-	session, err := tf.NewSession(graph, &tf.SessionOptions{})
+	session, err := tf.NewSession(graph, nil)
 	if err != nil {
-		panic(err)
+		return "", nil
 	}
 	defer session.Close()
 
-	//tensor := graph.Operation(inputName)
-	softmaxTensor := graph.Operation(outputName).Output(0)
 	tensor, err := tf.NewTensor(string(wavData))
 	if err != nil {
-		panic(err)
+		return "", nil
 	}
 
-	output, err := session.Run(
-		map[tf.Output]*tf.Tensor{
-			graph.Operation(inputName).Output(0): tensor,
-		}, []tf.Output{softmaxTensor},
-		nil)
+	softmaxTensor := graph.Operation(outputOperationName).Output(0)
+	inputOperation := graph.Operation(inputOperationName).Output(0)
+	m := map[tf.Output]*tf.Tensor{inputOperation: tensor,}
+
+	output, err := session.Run(m, []tf.Output{softmaxTensor}, nil)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
-	for i := 0; i < len(output); i++ {
+	var str string
+	// Uncomment this code when the output variable is defined:
+	 for i := 0; i < len(output); i++ {
 		if reflect.TypeOf(output[i].Value()).Kind() == reflect.Slice {
 			s := reflect.ValueOf(output[i].Value())
 
@@ -97,11 +147,11 @@ func runGraph(wavData []byte, labels []string) {
 					for k := 0; k < r.Len(); k++ {
 						q := r.Index(k)
 						humanString := labels[k] + ":\t"
-						fmt.Println(humanString, q)
+						str += fmt.Sprint(humanString, q, "\n")
 					}
 				}
 			}
 		}
 	}
-
+	return str, nil
 }

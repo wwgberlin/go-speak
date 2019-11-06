@@ -1,0 +1,18 @@
+version: '3'
+services:
+
+  speech_recognition:
+    image: ronnas/go-tf
+    ports:
+      - "6006:6006"
+    volumes:
+      - .:/go/src/github.com/wwgberlin/go-speak/
+    networks:
+      - network
+    environment:
+      - APP_DIR=/go/src/github.com/wwgberlin/go-speak
+    working_dir: /go/src/github.com/wwgberlin/go-speak
+
+
+networks:
+  network:
