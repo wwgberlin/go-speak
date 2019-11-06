@@ -6,7 +6,7 @@ import (
 	"os"
 	"bufio"
 	"fmt"
-	"reflect"
+	"errors"
 	"log"
 )
 
@@ -74,16 +74,7 @@ func readLabelsFromFile(labelsFilePath string) ([]string, error) {
 // Import the bytes read to the graph using the method
 // Import with empty prefix (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#Graph.Import)
 func importGraph(graphFilePath string) (*tf.Graph, error) {
-	// Load inception model
-	model, err := ioutil.ReadFile(graphFilePath)
-	if err != nil {
-		return nil, err
-	}
-	graph := tf.NewGraph()
-	if err := graph.Import(model, ""); err != nil {
-		return nil, err
-	}
-	return graph, nil
+	return nil, errors.New("not implemented")
 }
 
 //1, Create a new session using tf.NewSession (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#Session)
@@ -114,44 +105,27 @@ func runGraph(graph *tf.Graph, wavData []byte, labels []string) (string, error) 
 		inputOperationName  = "wav_data"       //Name of WAVE data input node in model.
 		outputOperationName = "labels_softmax" //Name of node outputting a prediction in the model
 	)
-	session, err := tf.NewSession(graph, nil)
-	if err != nil {
-		return "", nil
-	}
-	defer session.Close()
 
-	tensor, err := tf.NewTensor(string(wavData))
-	if err != nil {
-		return "", nil
-	}
-
-	softmaxTensor := graph.Operation(outputOperationName).Output(0)
-	inputOperation := graph.Operation(inputOperationName).Output(0)
-	m := map[tf.Output]*tf.Tensor{inputOperation: tensor,}
-
-	output, err := session.Run(m, []tf.Output{softmaxTensor}, nil)
-	if err != nil {
-		return "", err
-	}
+	//YOUR CODE GOES HERE!
 
 	var str string
 	// Uncomment this code when the output variable is defined:
-	 for i := 0; i < len(output); i++ {
-		if reflect.TypeOf(output[i].Value()).Kind() == reflect.Slice {
-			s := reflect.ValueOf(output[i].Value())
-
-			for j := 0; j < s.Len(); j++ {
-				r := s.Index(j)
-
-				if r.Kind() == reflect.Slice {
-					for k := 0; k < r.Len(); k++ {
-						q := r.Index(k)
-						humanString := labels[k] + ":\t"
-						str += fmt.Sprint(humanString, q, "\n")
-					}
-				}
-			}
-		}
-	}
+	// for i := 0; i < len(output); i++ {
+	//	if reflect.TypeOf(output[i].Value()).Kind() == reflect.Slice {
+	//		s := reflect.ValueOf(output[i].Value())
+	//
+	//		for j := 0; j < s.Len(); j++ {
+	//			r := s.Index(j)
+	//
+	//			if r.Kind() == reflect.Slice {
+	//				for k := 0; k < r.Len(); k++ {
+	//					q := r.Index(k)
+	//					humanString := labels[k] + ":\t"
+	//					str += fmt.Sprint(humanString, q, "\n")
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
 	return str, nil
 }
