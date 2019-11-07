@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"errors"
 	"log"
+	"reflect"
 )
 
 const (
@@ -93,9 +94,10 @@ func importGraph(graphFilePath string) (*tf.Graph, error) {
 //
 //6. Run the session (https://godoc.org/github.com/tensorflow/tensorflow/tensorflow/go#Session.Run)
 //   with the map we've instantiated above and an Output slice containing exactly one item - our softmaxTensor.
-//   assign the result to a variable named output and uncomment the rest of the function to print the results nicely.
+//   and use fmtOutput to format the result.
 //   Return the respective error if necessary.
-//7	 Run the tests.
+//
+//7. Run the tests.
 func runGraph(graph *tf.Graph, wavData []byte, labels []string) (string, error) {
 	const (
 		inputOperationName  = "wav_data"       //Name of WAVE data input node in model.
@@ -104,24 +106,28 @@ func runGraph(graph *tf.Graph, wavData []byte, labels []string) (string, error) 
 
 	//YOUR CODE GOES HERE!
 
-	var str string
 	// Uncomment this code when the output variable is defined:
-	// for i := 0; i < len(output); i++ {
-	//	if reflect.TypeOf(output[i].Value()).Kind() == reflect.Slice {
-	//		s := reflect.ValueOf(output[i].Value())
-	//
-	//		for j := 0; j < s.Len(); j++ {
-	//			r := s.Index(j)
-	//
-	//			if r.Kind() == reflect.Slice {
-	//				for k := 0; k < r.Len(); k++ {
-	//					q := r.Index(k)
-	//					humanString := labels[k] + ":\t"
-	//					str += fmt.Sprint(humanString, q, "\n")
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
-	return str, nil
+	return "", nil
+}
+
+func fmtOutput(output []*tf.Tensor, labels []string) string {
+	var str string
+	for i := 0; i < len(output); i++ {
+		if reflect.TypeOf(output[i].Value()).Kind() == reflect.Slice {
+			s := reflect.ValueOf(output[i].Value())
+
+			for j := 0; j < s.Len(); j++ {
+				r := s.Index(j)
+
+				if r.Kind() == reflect.Slice {
+					for k := 0; k < r.Len(); k++ {
+						q := r.Index(k)
+						humanString := labels[k] + ":\t"
+						str += fmt.Sprint(humanString, q, "\n")
+					}
+				}
+			}
+		}
+	}
+	return str
 }
