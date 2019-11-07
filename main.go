@@ -134,9 +134,12 @@ func runGraph(graph *tf.Graph, wavData []byte, labels []string) (string, error) 
 		return "", err
 	}
 
+	return fmtOutput(output, labels), nil
+}
+
+func fmtOutput(output []*tf.Tensor, labels []string) string {
 	var str string
-	// Uncomment this code when the output variable is defined:
-	 for i := 0; i < len(output); i++ {
+	for i := 0; i < len(output); i++ {
 		if reflect.TypeOf(output[i].Value()).Kind() == reflect.Slice {
 			s := reflect.ValueOf(output[i].Value())
 
@@ -153,5 +156,5 @@ func runGraph(graph *tf.Graph, wavData []byte, labels []string) (string, error) 
 			}
 		}
 	}
-	return str, nil
+	return str
 }
