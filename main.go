@@ -16,10 +16,6 @@ const (
 	labelsFilePath = "./tmp/speech_commands_train/conv_labels.txt"
 )
 
-var (
-	labels []string
-)
-
 func main() {
 	wavData, err := readWavDataFromFile(wavFilePath)
 	if err != nil {
